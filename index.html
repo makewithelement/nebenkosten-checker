@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Nebenkosten-Frist-Checker</title>
+<style>
+  :root{font-family:Inter,ui-sans-serif,system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#111}
+  body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f6f7f9;padding:20px}
+  .card{width:100%;max-width:680px;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(16,24,40,0.06);padding:22px}
+  h1{margin:0 0 8px;font-size:18px}
+  p.lead{margin:0 0 16px;color:#585b62}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  select,input[type="date"]{flex:1;min-width:160px;padding:10px;border:1px solid #e6e7ea;border-radius:8px;font-size:14px}
+  .result{height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .result .text{padding:8px 12px;border-radius:8px}
+  .bar{height:10px;border-radius:6px;margin-top:12px;transition:width .25s ease, background .25s ease}
+  .meta{margin-top:10px;color:#6b6f76;font-size:13px}
+  .muted{color:#8b8f95;font-size:13px}
+  .footer{margin-top:18px;font-size:13px;color:#7a7d82}
+  @media (max-width:520px){.row{flex-direction:column}}
+</style>
+</head>
+<body>
+  <div class="card" role="application" aria-label="Nebenkosten Frist Checker">
+    <h1>Nebenkosten-Frist-Checker</h1>
+    <p class="lead">Wähle das Abrechnungsjahr und das Datum, an dem du die Abrechnung erhalten hast. Das Tool prüft, ob die Zustellung fristgerecht war.</p>
+
+    <div class="row">
+      <select id="year" aria-label="Abrechnungsjahr">
+        <!-- Du kannst hier Jahre ergänzen -->
+        <option value="2021">2021</option>
+        <option value="2022">2022</option>
+        <option value="2023" selected>2023</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+      </select>
+
+      <input id="receivedDate" type="date" aria-label="Erhalten am" />
+    </div>
+
+    <div id="resultBox" class="result" style="background:#fff;border:1px solid #eef0f3">
+      <span id="resultText" class="text muted">Wähle ein Jahr und ein Datum, um zu prüfen.</span>
+    </div>
+
+    <div class="bar" id="bar" style="width:0%"></div>
+
+    <div class="meta" id="metaText" aria-live="polite"></div>
+
+    <div class="footer">Hinweis: Gesetzlich gilt in Deutschland: Zustellung innerhalb 12 Monate nach Ende des Abrechnungszeitraums. (Beispiel: Abrechnungsjahr 2023 → Fristende: 31.12.2024)</div>
+  </div>
+
+<script>
+(function(){
+  const yearEl = document.getElementById('year');
+  const dateEl = document.getElementById('receivedDate');
+  const resultText = document.getElementById('resultText');
+  const resultBox = document.getElementById('resultBox');
+  const bar = document.getElementById('bar');
+  const meta = document.getElementById('metaText');
+
+  function parseDateInput(v){
+    if(!v) return null;
+    const d = new Date(v);
+    if(isNaN(d)) return null;
+    // normalize to local midnight
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function update(){
+    const year = parseInt(yearEl.value,10);
+    const received = parseDateInput(dateEl.value);
+    // Fristende: 31.12.(year+1)
+    const deadline = new Date(year + 1, 11, 31); // month index 11 = Dec
+
+    if(!received){
+      resultText.textContent = "Bitte Datum der Zustellung auswählen.";
+      resultText.className = "text muted";
+      resultBox.style.borderColor = "#eef0f3";
+      resultBox.style.background = "#fff";
+      bar.style.width = "0%";
+      meta.textContent = `Fristende für ${year}: ${deadline.toLocaleDateString('de-DE')}`;
+      return;
+    }
+
+    // compare by date only
+    const receivedTime = Date.UTC(received.getFullYear(), received.getMonth(), received.getDate());
+    const deadlineTime = Date.UTC(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
+
+    if(receivedTime <= deadlineTime){
+      // fristgerecht
+      resultText.textContent = "🟩 Fristgerechter Eingang. Zahlung ist zu leisten.";
+      resultText.className = "text";
+      resultBox.style.borderColor = "#d1e7dd";
+      resultBox.style.background = "#f4fbf6";
+      bar.style.width = "100%";
+      bar.style.background = "#2f9e44";
+      meta.textContent = `Erhalten am: ${received.toLocaleDateString('de-DE')} · Fristende: ${deadline.toLocaleDateString('de-DE')} (fristgerecht)`;
+    } else {
+      // verspätet
+      resultText.textContent = "🟥 Verspäteter Zugang. Zahlung ist nicht zu leisten.";
+      resultText.className = "text";
+      resultBox.style.borderColor = "#f8d7da";
+      resultBox.style.background = "#fff5f6";
+      bar.style.width = "100%";
+      bar.style.background = "#d63a3a";
+      meta.textContent = `Erhalten am: ${received.toLocaleDateString('de-DE')} · Fristende: ${deadline.toLocaleDateString('de-DE')} (verspätet)`;
+    }
+  }
+
+  yearEl.addEventListener('change', update);
+  dateEl.addEventListener('input', update);
+
+  // initial meta
+  const initialYear = parseInt(yearEl.value,10);
+  const initialDeadline = new Date(initialYear + 1, 11, 31);
+  meta.textContent = `Fristende für ${initialYear}: ${initialDeadline.toLocaleDateString('de-DE')}`;
+})();
+</script>
+</body>
+</html>
