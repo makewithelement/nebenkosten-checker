@@ -5,24 +5,76 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Nebenkosten-Frist-Checker</title>
 <style>
-  :root{font-family:Inter,ui-sans-serif,system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color:#111}
-  body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f6f7f9;padding:20px}
-  .card{width:100%;max-width:680px;background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(16,24,40,0.06);padding:22px}
+  :root {
+    --bg: #f6f7f9;
+    --card-bg: #fff;
+    --text: #111;
+    --lead: #585b62;
+    --muted: #8b8f95;
+    --border: #eef0f3;
+    --bar-green: #2f9e44;
+    --bar-red: #d63a3a;
+    --result-green-bg: #f4fbf6;
+    --result-red-bg: #fff5f6;
+  }
+
+  body {
+    margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    background: var(--bg);
+    padding:20px;
+    transition: background .3s, color .3s;
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  .card {
+    width:100%;
+    max-width:680px;
+    background: var(--card-bg);
+    border-radius:12px;
+    box-shadow:0 6px 24px rgba(16,24,40,0.06);
+    padding:22px;
+    transition: background .3s, color .3s;
+  }
+
   h1{margin:0 0 8px;font-size:18px}
-  p.lead{margin:0 0 16px;color:#585b62}
+  p.lead{margin:0 0 16px;color: var(--lead)}
   .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-  select,input[type="date"]{flex:1;min-width:160px;padding:10px;border:1px solid #e6e7ea;border-radius:8px;font-size:14px}
-  .result{height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
+  select,input[type="date"]{flex:1;min-width:160px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;color:#111}
+  .result{height:64px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600;transition: background .3s, border-color .3s;}
   .result .text{padding:8px 12px;border-radius:8px}
   .bar{height:10px;border-radius:6px;margin-top:12px;transition:width .25s ease, background .25s ease}
   .meta{margin-top:10px;color:#6b6f76;font-size:13px}
-  .muted{color:#8b8f95;font-size:13px}
+  .muted{color: var(--muted);font-size:13px}
   .footer{margin-top:18px;font-size:13px;color:#7a7d82}
+  .copyright{margin-top:16px;font-size:13px;text-align:center;color:#7a7d82}
+  .theme-toggle{margin-bottom:12px;cursor:pointer;display:inline-block;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:#fff}
   @media (max-width:520px){.row{flex-direction:column}}
+
+  /* Dark Theme */
+  body.dark {
+    --bg: #111318;
+    --card-bg: #1a1c23;
+    --text: #f0f0f5;
+    --lead: #b0b2b8;
+    --muted: #8b8f95;
+    --border: #3a3d45;
+    --bar-green: #4caf50;
+    --bar-red: #f44336;
+    --result-green-bg: #1e2a1e;
+    --result-red-bg: #2a1e1e;
+  }
 </style>
 </head>
 <body>
   <div class="card" role="application" aria-label="Nebenkosten Frist Checker">
+
+    <div class="theme-toggle" id="themeToggle">🌙 Dunkelmodus</div>
+
     <h1>Nebenkosten-Frist-Checker</h1>
     <p class="lead">Wähle das Abrechnungsjahr und das Datum, an dem du die Abrechnung erhalten hast. Das Tool prüft, ob die Zustellung fristgerecht war.</p>
 
@@ -40,6 +92,8 @@
     <div class="meta" id="metaText" aria-live="polite"></div>
 
     <div class="footer">Hinweis: Vermieter müssen die Abrechnung innerhalb von 12 Monaten nach Ende des Abrechnungszeitraums zustellen (§556 Abs.3 BGB).</div>
+
+    <div class="copyright" id="copyright"></div>
   </div>
 
 <script>
@@ -50,8 +104,10 @@
   const resultBox = document.getElementById('resultBox');
   const bar = document.getElementById('bar');
   const meta = document.getElementById('metaText');
+  const themeToggle = document.getElementById('themeToggle');
+  const body = document.body;
 
-  // 🔹 Dynamische Jahr-Liste erzeugen (z. B. 2000 bis aktuelles Jahr + 5)
+  // Dynamische Jahr-Liste erzeugen (2000 bis aktuelles Jahr +5)
   const currentYear = new Date().getFullYear();
   for (let y = 2000; y <= currentYear + 5; y++) {
     const opt = document.createElement('option');
@@ -71,13 +127,13 @@
   function update(){
     const year = parseInt(yearEl.value,10);
     const received = parseDateInput(dateEl.value);
-    const deadline = new Date(year + 1, 11, 31); // 31.12.(year+1)
+    const deadline = new Date(year + 1, 11, 31);
 
     if(!received){
       resultText.textContent = "Bitte Datum der Zustellung auswählen.";
       resultText.className = "text muted";
-      resultBox.style.borderColor = "#eef0f3";
-      resultBox.style.background = "#fff";
+      resultBox.style.borderColor = getComputedStyle(body).getPropertyValue('--border');
+      resultBox.style.background = body.classList.contains('dark') ? '#1a1c23' : '#fff';
       bar.style.width = "0%";
       meta.textContent = `Fristende für ${year}: ${deadline.toLocaleDateString('de-DE')}`;
       return;
@@ -89,29 +145,43 @@
     if(receivedTime <= deadlineTime){
       resultText.textContent = "🟩 Fristgerechter Eingang. Zahlung ist zu leisten.";
       resultText.className = "text";
-      resultBox.style.borderColor = "#d1e7dd";
-      resultBox.style.background = "#f4fbf6";
+      resultBox.style.borderColor = getComputedStyle(body).getPropertyValue('--bar-green');
+      resultBox.style.background = body.classList.contains('dark') ? '#1e2a1e' : '#f4fbf6';
       bar.style.width = "100%";
-      bar.style.background = "#2f9e44";
+      bar.style.background = getComputedStyle(body).getPropertyValue('--bar-green');
       meta.textContent = `Erhalten am: ${received.toLocaleDateString('de-DE')} · Fristende: ${deadline.toLocaleDateString('de-DE')} (fristgerecht)`;
     } else {
       resultText.textContent = "🟥 Verspäteter Zugang. Zahlung ist nicht zu leisten.";
       resultText.className = "text";
-      resultBox.style.borderColor = "#f8d7da";
-      resultBox.style.background = "#fff5f6";
+      resultBox.style.borderColor = getComputedStyle(body).getPropertyValue('--bar-red');
+      resultBox.style.background = body.classList.contains('dark') ? '#2a1e1e' : '#fff5f6';
       bar.style.width = "100%";
-      bar.style.background = "#d63a3a";
+      bar.style.background = getComputedStyle(body).getPropertyValue('--bar-red');
       meta.textContent = `Erhalten am: ${received.toLocaleDateString('de-DE')} · Fristende: ${deadline.toLocaleDateString('de-DE')} (verspätet)`;
     }
   }
 
+  // Event-Listener
   yearEl.addEventListener('change', update);
   dateEl.addEventListener('input', update);
 
-  // initial info
+  // initial meta
   const initialYear = parseInt(yearEl.value,10);
   const initialDeadline = new Date(initialYear + 1, 11, 31);
   meta.textContent = `Fristende für ${initialYear}: ${initialDeadline.toLocaleDateString('de-DE')}`;
+
+  // Theme Toggle
+  themeToggle.addEventListener('click', ()=>{
+    body.classList.toggle('dark');
+    themeToggle.textContent = body.classList.contains('dark') ? '☀️ Hellmodus' : '🌙 Dunkelmodus';
+    update(); // Farben aktualisieren
+  });
+
+  // Copyright dynamisch setzen
+  const copyrightEl = document.getElementById('copyright');
+  const yearNow = new Date().getFullYear();
+  copyrightEl.textContent = `(C) ${yearNow} Life of Adult - OS`;
+
 })();
 </script>
 </body>
