@@ -27,15 +27,7 @@
     <p class="lead">Wähle das Abrechnungsjahr und das Datum, an dem du die Abrechnung erhalten hast. Das Tool prüft, ob die Zustellung fristgerecht war.</p>
 
     <div class="row">
-      <select id="year" aria-label="Abrechnungsjahr">
-        <!-- Du kannst hier Jahre ergänzen -->
-        <option value="2021">2021</option>
-        <option value="2022">2022</option>
-        <option value="2023" selected>2023</option>
-        <option value="2024">2024</option>
-        <option value="2025">2025</option>
-      </select>
-
+      <select id="year" aria-label="Abrechnungsjahr"></select>
       <input id="receivedDate" type="date" aria-label="Erhalten am" />
     </div>
 
@@ -47,7 +39,7 @@
 
     <div class="meta" id="metaText" aria-live="polite"></div>
 
-    <div class="footer">Hinweis: Gesetzlich gilt in Deutschland: Zustellung innerhalb 12 Monate nach Ende des Abrechnungszeitraums. (Beispiel: Abrechnungsjahr 2023 → Fristende: 31.12.2024)</div>
+    <div class="footer">Hinweis: Vermieter müssen die Abrechnung innerhalb von 12 Monaten nach Ende des Abrechnungszeitraums zustellen (§556 Abs.3 BGB).</div>
   </div>
 
 <script>
@@ -59,19 +51,27 @@
   const bar = document.getElementById('bar');
   const meta = document.getElementById('metaText');
 
+  // 🔹 Dynamische Jahr-Liste erzeugen (z. B. 2000 bis aktuelles Jahr + 5)
+  const currentYear = new Date().getFullYear();
+  for (let y = 2000; y <= currentYear + 5; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearEl.appendChild(opt);
+  }
+
   function parseDateInput(v){
     if(!v) return null;
     const d = new Date(v);
     if(isNaN(d)) return null;
-    // normalize to local midnight
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
 
   function update(){
     const year = parseInt(yearEl.value,10);
     const received = parseDateInput(dateEl.value);
-    // Fristende: 31.12.(year+1)
-    const deadline = new Date(year + 1, 11, 31); // month index 11 = Dec
+    const deadline = new Date(year + 1, 11, 31); // 31.12.(year+1)
 
     if(!received){
       resultText.textContent = "Bitte Datum der Zustellung auswählen.";
@@ -83,12 +83,10 @@
       return;
     }
 
-    // compare by date only
     const receivedTime = Date.UTC(received.getFullYear(), received.getMonth(), received.getDate());
     const deadlineTime = Date.UTC(deadline.getFullYear(), deadline.getMonth(), deadline.getDate());
 
     if(receivedTime <= deadlineTime){
-      // fristgerecht
       resultText.textContent = "🟩 Fristgerechter Eingang. Zahlung ist zu leisten.";
       resultText.className = "text";
       resultBox.style.borderColor = "#d1e7dd";
@@ -97,7 +95,6 @@
       bar.style.background = "#2f9e44";
       meta.textContent = `Erhalten am: ${received.toLocaleDateString('de-DE')} · Fristende: ${deadline.toLocaleDateString('de-DE')} (fristgerecht)`;
     } else {
-      // verspätet
       resultText.textContent = "🟥 Verspäteter Zugang. Zahlung ist nicht zu leisten.";
       resultText.className = "text";
       resultBox.style.borderColor = "#f8d7da";
@@ -111,7 +108,7 @@
   yearEl.addEventListener('change', update);
   dateEl.addEventListener('input', update);
 
-  // initial meta
+  // initial info
   const initialYear = parseInt(yearEl.value,10);
   const initialDeadline = new Date(initialYear + 1, 11, 31);
   meta.textContent = `Fristende für ${initialYear}: ${initialDeadline.toLocaleDateString('de-DE')}`;
